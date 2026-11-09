@@ -1,6 +1,7 @@
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,13 +9,16 @@
 <title>Swarnadeep Bagchi (he/him) | Mathematics</title>
 
 <style>
+
 body {
     margin: 0;
     font-family: Georgia, serif;
     background: #f7f4ec;
     color: #38372f;
-    line-height: 1.7;
+    line-height: 1.8;
 }
+
+/* Header */
 
 header {
     background: #eee9dc;
@@ -25,7 +29,10 @@ header {
 header h1 {
     margin: 0;
     font-size: 28px;
+    color: #514638;
 }
+
+/* Navigation */
 
 nav {
     margin-top: 15px;
@@ -42,8 +49,10 @@ nav a:hover {
     color: #9a7652;
 }
 
+/* Main content */
+
 main {
-    max-width: 950px;
+    max-width: 1050px;
     margin: 65px auto;
     padding: 0 25px;
 }
@@ -53,23 +62,94 @@ h2 {
     font-weight: normal;
 }
 
-section {
-    margin-bottom: 55px;
+/* Introduction layout */
+
+.introduction {
+    display: grid;
+    grid-template-columns: 1fr 260px;
+    gap: 45px;
+    align-items: start;
 }
+
+.intro-text {
+    font-size: 16px;
+}
+
+.highlight {
+    color: #8B5E3C;
+}
+
+/* Profile photograph */
+
+.profile-photo {
+    text-align: center;
+    margin-top: 15px;
+}
+
+.profile-photo img {
+    width: 100%;
+    max-width: 260px;
+    height: 340px;
+    object-fit: cover;
+    object-position: center;
+    border-radius: 5px;
+    border: 1px solid #ded8ca;
+}
+
+/* Footer */
 
 footer {
     text-align: center;
     padding: 25px;
     background: #eee9dc;
     color: #777;
+    margin-top: 70px;
 }
+
+/* Mobile display */
+
+@media (max-width: 700px) {
+
+    header {
+        padding: 22px 6%;
+    }
+
+    nav a {
+        display: inline-block;
+        margin: 5px 12px 5px 0;
+    }
+
+    main {
+        margin: 35px auto;
+    }
+
+    .introduction {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    .profile-photo {
+        grid-row: 1;
+        text-align: center;
+    }
+
+    .profile-photo img {
+        max-width: 230px;
+        height: 290px;
+    }
+}
+
 </style>
 </head>
 
 <body>
 
+<!-- Header and Navigation -->
+
 <header>
+
     <h1>Swarnadeep Bagchi (he/him)</h1>
+
     <nav>
         <a href="index.html">Home</a>
         <a href="research.html">Research</a>
@@ -79,74 +159,106 @@ footer {
         <a href="useful-links.html">Useful Links</a>
         <a href="beyond-mathematics.html">Beyond Mathematics</a>
     </nav>
+
 </header>
+
+
+<!-- Homepage Introduction -->
 
 <main>
 
 <section id="home">
-    <h2>Welcome to my webpage!</h2>
 
-    <p>
-    I am a mathematician interested in probability theory
-    and related areas of mathematics.
-    </p>
+    <div class="introduction">
 
-    <p>
-    I am currently pursuing <strong>Ph.D. in Mathematics</strong>
-    at <strong>University of Victoria (UVic)</strong>, British Columbia,
-    Canada, where I have been since September 2023. Before joining UVic,
-    I completed my <strong>Master of Science (M.Sc.) in Mathematics</strong>
-    at <strong>Indian Institute of Technology Gandhinagar
-    (IIT Gandhinagar)</strong>, India, and my
-    <strong>Bachelor of Science (B.Sc.) in Mathematics</strong>
-    at <strong>Jadavpur University</strong>, Kolkata, India.
-    </p>
+        <!-- Introduction text -->
 
-    <p>
-    I am interested in random graphs, combinatorics, stochastic
-    processes, and their asymptotic properties.
-    </p>
+        <div class="intro-text">
 
-    <p>
-    My current research focuses on topics such as
-    <strong>minimum spanning arborescences (MSA)</strong>,
-    <strong>cycle-rooted spanning forests (CRSF)</strong>,
-    random coverings of fractals, and
-    <strong>loop-contracting random walks (LCRW)</strong>.
-    </p>
+            <h2>Welcome to my webpage!</h2>
 
-    <p>
-    I am particularly interested in exploring connections between
-    probability theory, combinatorics, geometry, and other related
-    areas of mathematics.
-    </p>
+            <p>
+            I am a mathematician interested in probability theory
+            and related areas of mathematics.
+            </p>
 
-    <p>
-    I am always happy to connect with fellow mathematicians,
-    researchers, students, and anyone who shares an interest in
-    mathematics. Feel free to explore my website and get in touch
-    at swarnadeepbagchi at uvic dot ca!
-    </p>
+            <p>
+            I am currently pursuing
+            <strong>Ph.D. in Mathematics</strong> at
+            <strong>University of Victoria (UVic)</strong>,
+            British Columbia, Canada, where I have been since
+            September 2023. Before joining UVic, I completed my
+            <strong>Master of Science (M.Sc.) in Mathematics</strong>
+            at <strong>Indian Institute of Technology Gandhinagar
+            (IIT Gandhinagar)</strong>, India, and my
+            <strong>Bachelor of Science (B.Sc.) in Mathematics</strong>
+            at <strong>Jadavpur University</strong>, Kolkata, India.
+            </p>
 
-    <p>
-    <span style="color: #8B5E3C;">
-    <em>
-    I am currently co-organising the
-    <strong>Probability and Dynamics Seminar</strong> at UVic.
-    If you are interested in giving a talk or would like to know
-    more about the seminar, please feel free to get in touch with
-    me at
-    <a href="mailto:swarnadeepbagchi@uvic.ca"
-       style="color: #8B5E3C;">
-       swarnadeepbagchi@uvic.ca
-    </a>.
-    </em>
-    </span>
-    </p>
+            <p>
+            I am interested in random graphs, combinatorics,
+            stochastic processes, and their asymptotic properties.
+            </p>
+
+            <p>
+            My current research focuses on topics such as
+            <strong>minimum spanning arborescences (MSA)</strong>,
+            <strong>cycle-rooted spanning forests (CRSF)</strong>,
+            random coverings of fractals, and
+            <strong>loop-contracting random walks (LCRW)</strong>.
+            </p>
+
+            <p>
+            I am particularly interested in exploring connections
+            between probability theory, combinatorics, geometry,
+            and other related areas of mathematics.
+            </p>
+
+            <p>
+            I am always happy to connect with fellow mathematicians,
+            researchers, students, and anyone who shares an interest
+            in mathematics. Feel free to explore my website and get
+            in touch at
+            <a href="mailto:swarnadeepbagchi@uvic.ca"
+               class="highlight">
+               swarnadeepbagchi@uvic.ca
+            </a>!
+            </p>
+
+            <p class="highlight">
+            <em>
+            I am currently co-organising the
+            <strong>Probability and Dynamics Seminar</strong> at UVic.
+            If you are interested in giving a talk or would like to
+            know more about the seminar, please feel free to get in
+            touch with me at
+            <a href="mailto:swarnadeepbagchi@uvic.ca"
+               class="highlight">
+               swarnadeepbagchi@uvic.ca
+            </a>.
+            </em>
+            </p>
+
+        </div>
+
+
+        <!-- Profile photograph -->
+
+        <div class="profile-photo">
+
+            <img src="ChatGPT Image Nov 8, 2026, 07_42_18 PM.jpg"
+                 alt="Swarnadeep Bagchi">
+
+        </div>
+
+    </div>
 
 </section>
 
 </main>
+
+
+<!-- Footer -->
 
 <footer>
     © 2026 Swarnadeep Bagchi
@@ -154,4 +266,5 @@ footer {
 
 </body>
 </html>
+
 
