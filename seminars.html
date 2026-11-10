@@ -36,14 +36,16 @@ MathJax = {
 }
 
         nav {
-            margin-top: 15px;
-        }
+    margin-top: 15px;
+}
 
-        nav a {
+nav a {
+    display: inline-block;
     color: #625b4e;
     text-decoration: none;
-    margin-right: 22px;
+    margin: 5px 12px 5px 0;
     font-size: 15px;
+    white-space: nowrap;
 }
 
         nav a:hover {
@@ -51,10 +53,10 @@ MathJax = {
 }
 
         main {
-            max-width: 900px;
-            margin: 65px auto;
-            padding: 0 25px;
-        }
+    max-width: 1050px;
+    margin: 65px auto;
+    padding: 0 25px;
+}
 
         h2 {
     color: #655747;
@@ -71,6 +73,25 @@ MathJax = {
         .course {
             margin-bottom: 25px;
         }
+    /* Mobile display */
+
+@media (max-width: 700px) {
+
+    header {
+        padding: 22px 6%;
+    }
+
+    nav a {
+        display: inline-block;
+        margin: 5px 12px 5px 0;
+        white-space: nowrap;
+    }
+
+    main {
+        margin: 35px auto;
+    }
+
+}
     </style>
 </head>
 
