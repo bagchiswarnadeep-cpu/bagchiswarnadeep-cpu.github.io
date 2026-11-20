@@ -1,0 +1,79 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Finite MSA explorer</title><style>
+:root{color-scheme:light}*{box-sizing:border-box}body{max-width:1140px;margin:0 auto;padding:26px clamp(14px,3vw,38px);background:#f8f6f0;color:#263c37;font:16px/1.55 system-ui,sans-serif}h1,h2,h3{font:normal 2em Georgia,serif;margin:.25em 0}h1{font-size:clamp(32px,5vw,56px)}h3{font-size:23px}.bar,.legend{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:15px 0}article,section{border:1px solid #d4d9d0;border-radius:10px;padding:16px;background:#fffefa}input,select,button{font:inherit;padding:5px 8px;border-radius:5px;border:1px solid #abb9ac;background:white}input{width:128px}button{cursor:pointer;background:#205447;color:white}figure{margin:0}.viewport{overflow:auto;background:#f7f8f3;height:320px;border-radius:6px}svg{display:block}.dot{color:#ac4c26}article p,figcaption,small{font-size:14px}table{border-collapse:collapse;width:100%;text-align:right;font-variant-numeric:tabular-nums}td,th{padding:8px;border-bottom:1px solid #d8dfd6}th:first-child,td:first-child{text-align:left}section{margin-top:18px}a{color:#205447}button:disabled{opacity:.6}@media(max-width:700px){.viewport{height:280px}} 
+</style><h1>Through a typical vertex</h1><p>Explore a minimum spanning arborescence sampled on a finite complete directed graph. The view contains all vertices within <i>r</i> tree edges of the observation vertex ρ. Distance ignores orientation; the arrows retain it.</p>
+<div class="bar"><label>Graph size <select id="size"><option>16</option><option>32</option><option selected>64</option><option>96</option></select></label><label>Radius <select id="rad"><option>1</option><option selected>2</option><option>3</option><option>4</option><option>5</option></select></label><label>Seed <input id="seed" type="number" min="0" max="4294967295" value="7"></label><button id="new">New sample</button></div>
+<article><h3>Finite arborescence</h3><p>CLEB on independent Exp(1) directed edge weights. Vertex 1 serves as ρ by symmetry among nonboundary vertices.</p><figure><div class="viewport" id="finite"></div><figcaption id="finiteInfo"></figcaption></figure></article>
+<p class="legend"><b class="dot">● ρ</b> Observation vertex <b class="dot">→</b> Path toward ∂ <b>∂</b> Finite boundary, when visible</p><small>Read the drawing from left to right by distance from ρ. Changing the radius reveals more of the same tree.</small>
+<section><h2>Compare neighborhood laws</h2><p>Keep the radius fixed and average over freshly sampled arborescences at each size. Compare the ball size, the fraction with no incoming neighbors at ρ, and the fraction where ∂ is visible.</p><div class="bar"><label>Samples per size <select id="reps"><option>25</option><option selected>100</option><option>300</option></select></label><button id="run">Run comparison</button><span id="status" aria-live="polite"></span></div><div style="overflow:auto"><table><thead><tr><th>Graph</th><th>Mean ball size</th><th>No incoming neighbors</th><th>Boundary visible</th></tr></thead><tbody id="rows"></tbody></table></div><small>± gives one Monte Carlo standard error for the estimated mean ball size.</small></section>
+<script>
+const el=id=>document.getElementById(id);
+function rng(seed){return ()=>{seed=(seed+0x6D2B79F5)>>>0; let z=Math.imul(seed^(seed>>>15),1|seed);z^=z+Math.imul(z^(z>>>7),61|z);return (((z^(z>>>14))>>>0)+0.5)/4294967296}}
+function simulate(n,seed,trace=false){
+ const random=rng(seed), vertices=Array.from({length:n},(_,i)=>i),edges=[],frames=[];
+ const names=vertices.map(v=>v?String(v):'∂');
+ for(const a of vertices)for(const b of vertices)if(a!==b){let w=-Math.log1p(-random());edges.push({a,b,w,original:w})}
+ let lower=0,cycles=0;
+ function frame(v,arcs,message,cycle=[]){if(trace)frames.push({v,arcs,message,cycle})}
+ function solve(v,arcs){
+  const best=new Map();
+  for(const e of arcs)if(e.a!==0&&(!best.has(e.a)||e.w<best.get(e.a).w))best.set(e.a,e);
+  const selected=[...best.values()];
+  if(v===vertices)lower=selected.reduce((s,e)=>s+e.w,0);
+  frame(v,selected,'Each nonboundary vertex or group selects its cheapest outgoing edge at the current weights.');
+  let cycle=[],done=new Set([0]);
+  for(let x of v){const path=new Set();while(!done.has(x)&&!path.has(x)){path.add(x);x=best.get(x).b}
+   if(path.has(x)){let y=x;do{cycle.push(y);y=best.get(y).b}while(y!==x);break}for(const y of path)done.add(y)}
+  if(!cycle.length)return selected;
+  cycles++;const inside=new Set(cycle),g=names.length;
+  names.push('{'+cycle.map(x=>names[x].replace(/[{}]/g,'')).join(',')+'}');
+  frame(v,selected,'The highlighted cycle cannot reach ∂. Contract its vertices into one group.',cycle);
+  const reduced=[];
+  for(const e of arcs){const a=inside.has(e.a)?g:e.a,b=inside.has(e.b)?g:e.b;if(a!==b)reduced.push({a,b,w:e.w-(a===g?best.get(e.a).w:0),prev:e})}
+  const small=v.filter(x=>!inside.has(x)).concat(g);
+  frame(small,[],'Cycle contracted. Each edge leaving the group costs its old weight minus the chosen weight at its original tail. This is the extra cost of using that exit.');
+  const lifted=solve(small,reduced).map(e=>e.prev);
+  const exit=lifted.find(e=>inside.has(e.a));
+  const tree=lifted.concat(cycle.filter(x=>x!==exit.a).map(x=>best.get(x)));
+  frame(v,tree,'Expand '+names[g]+'. Keep its exit from '+names[exit.a]+' and restore the cycle arrows from every other member.');
+  return tree;
+ }
+ const tree=solve(vertices,edges),W=tree.reduce((s,e)=>s+e.original,0);
+ const parent=new Map(tree.map(e=>[e.a,e.b]));let L=0;for(let x=1;x!==0;x=parent.get(x))L++;
+ frame(vertices,tree,'Final MSA. Total original weight = '+W.toFixed(5)+'. The path from 1 to ∂ has '+L+' edge'+(L===1?'':'s')+'.');
+ return {frames,names,tree,W,L,lower,cycles};
+}
+function finiteTree(n,seed){
+ const parent=Array(n).fill(-1);for(const e of simulate(n,seed).tree)parent[e.a]=e.b;
+ return {parent,root:1,boundary:0};
+}
+function ball(t,r){
+ const adj=t.parent.map(()=>[]);t.parent.forEach((p,v)=>{if(p>=0){adj[v].push(p);adj[p].push(v)}});
+ const nodes=[{v:t.root,d:0,from:-1,path:true,children:[]}];for(let i=0;i<nodes.length;i++){
+  const a=nodes[i];if(a.d===r)continue;
+  for(const v of adj[a.v])if(v!==a.from){const b={v,d:a.d+1,from:a.v,path:a.path&&t.parent[a.v]===v,children:[]};a.children.push(b);nodes.push(b)}
+ }return nodes;
+}
+function paint(key,t,r){
+ const nodes=ball(t,r);let leaves=0;
+ function layout(a){for(const b of a.children)layout(b);a.y=a.children.length?(a.children[0].y+a.children.at(-1).y)/2:leaves++}
+ layout(nodes[0]);const w=Math.max(310,el(key).clientWidth-18),h=Math.max(258,leaves*31+40);
+ for(const a of nodes){a.x=29+a.d*(w-62)/r;a.y=leaves===1?h/2:21+a.y*(h-42)/(leaves-1)}
+ let s='<defs>';for(const [name,color] of [['spine','#ae4d25'],['side','#40766b']])s+='<marker id="'+key+name+'" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L8 4L0 8Z" fill="'+color+'"/></marker>';s+='</defs>';
+ for(const a of nodes)for(const b of a.children){const [u,v]=t.parent[a.v]===b.v?[a,b]:[b,a];const dx=v.x-u.x,dy=v.y-u.y,len=Math.hypot(dx,dy);s+='<line x1="'+(u.x+8*dx/len)+'" y1="'+(u.y+8*dy/len)+'" x2="'+(v.x-10*dx/len)+'" y2="'+(v.y-10*dy/len)+'" stroke="'+(b.path?'#ae4d25':'#40766b')+'" stroke-width="2" marker-end="url(#'+key+(b.path?'spine':'side')+')"/>'}
+ for(const a of nodes){const label=a.v===t.root?'ρ':a.v===t.boundary?'∂':'';s+='<circle cx="'+a.x+'" cy="'+a.y+'" r="'+(label?10:5)+'" fill="'+(a.path?'#ae4d25':'#40766b')+'"/>';if(label)s+='<text x="'+a.x+'" y="'+(a.y+4)+'" text-anchor="middle" fill="white" font-size="14">'+label+'</text>'}
+ el(key).innerHTML='<svg role="img" aria-label="'+key+' radius '+r+' neighborhood" width="'+w+'" height="'+h+'">'+s+'</svg>';el(key+'Info').textContent=nodes.length+' vertices · '+nodes.filter(a=>a.d===1&&t.parent[a.v]===t.root).length+' incoming neighbors at ρ'+(key==='finite'?' · ∂ '+(nodes.some(a=>a.v===0)?'visible':'outside ball'):'');
+}
+let tree,token=0;
+function seedValue(){if(!el('seed').value||!el('seed').reportValidity())return null;return Number(el('seed').value)}
+function display(){if(tree)paint('finite',tree,Number(el('rad').value))}
+function resetTable(){token++;el('run').disabled=false;el('status').textContent='';el('rows').innerHTML=''}
+function remake(){const seed=seedValue();if(seed===null)return;tree=finiteTree(Number(el('size').value),seed);display();resetTable()}
+el('size').onchange=el('seed').onchange=remake;el('rad').onchange=()=>{display();resetTable()};el('reps').onchange=resetTable;el('new').onclick=()=>{el('seed').value=crypto.getRandomValues(new Uint32Array(1))[0];remake()};
+el('run').onclick=async()=>{const seed=seedValue();if(seed===null)return;resetTable();const id=token,r=Number(el('rad').value),k=Number(el('reps').value),random=rng(seed^0x7812a3);el('run').disabled=true;
+ try{for(const n of [16,32,64,96]){let s=0,s2=0,zero=0,hit=0;
+ for(let i=0;i<k;i++){if(i%4===0){el('status').textContent='n = '+n+' · '+i+' / '+k;await new Promise(ok=>setTimeout(ok,0));if(id!==token)return}
+ const t=finiteTree(n,Math.floor(random()*4294967296)),nodes=ball(t,r);s+=nodes.length;s2+=nodes.length**2;zero+=!t.parent.includes(1);hit+=nodes.some(a=>a.v===0)}
+ const mean=s/k,se=Math.sqrt(Math.max(0,s2-s*s/k)/(k*(k-1)));el('rows').insertAdjacentHTML('afterbegin','<tr><td>n = '+n+'</td><td>'+mean.toFixed(2)+' ± '+se.toFixed(2)+'</td><td>'+(zero/k).toFixed(3)+'</td><td>'+(hit/k).toFixed(3)+'</td></tr>')}
+ el('status').textContent='Complete · '+k+' samples per size';}finally{if(id===token)el('run').disabled=false}};
+remake();
+</script></html>
