@@ -1,0 +1,61 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CLEB • From ρ to ∂</title><style>
+*{box-sizing:border-box}body{max-width:1060px;margin:0 auto;padding:26px clamp(12px,3vw,36px);font:16px/1.5 system-ui,sans-serif;color:#233e39;background:#f6f4ec}h1,h2,h3{font-family:Georgia,serif;font-weight:normal;margin:0}h1{font-size:clamp(32px,5vw,54px)}h2{font-size:29px}p{margin:7px 0 14px}button,select,input{font:inherit;border:1px solid #abb8aa;border-radius:6px;padding:5px 8px;background:white;color:inherit}button{cursor:pointer}button:disabled{opacity:.45}#play{background:#20574c;color:white;min-width:69px}.bar,.chain{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin:10px 0}.card{background:#fffef9;border:1px solid #d3dbd1;padding:16px;border-radius:10px}.grid{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(220px,1fr);gap:18px}svg{width:100%;display:block}#seed{width:126px}#scrub{width:100%;accent-color:#20574c}.chip{border:1px solid #829c92;padding:3px 8px;border-radius:12px;background:white}.active{background:#fce4c9;border-color:#a85828}small{color:#506059}#desc{min-height:4.5em}#counts{font-size:14px}.legend{font-size:14px}#stage{font-weight:600;color:#a04723}button:focus-visible,input:focus-visible{outline:3px solid #ac6e32}@media(max-width:690px){.grid{grid-template-columns:1fr}#desc{min-height:0}}</style>
+<h1>From ρ to ∂</h1><p>Follow one sequential CLEB walk on a complete directed graph with independent Exp(1) edge weights.</p>
+<div class="bar"><label>Vertices <select id="size"><option>8</option><option>14</option><option>20</option><option>30</option><option>64</option><option>128</option><option selected>256</option><option>512</option></select></label><label>Seed <input id="seed" type="number" min="0" max="4294967295" value="3"></label><button id="fresh">New sample</button><button id="demo">Snowball example</button></div>
+<div class="card"><div class="grid"><div><svg id="graph" viewBox="0 0 480 402" role="img" aria-label="Original vertices and arrows revealed by CLEB"></svg><div class="legend">Orange vertices belong to the highlighted component. A thick orange arrow marks the current choice or cycle. Pale arrows show earlier choices inside a contraction.</div></div>
+<div><small id="stage"></small><h2 id="title"></h2><p id="desc" aria-live="polite"></p><h3 id="chainTitle"></h3><div class="chain" id="chain"></div><small id="counts"></small></div></div>
+<input type="range" id="scrub" min="0" value="0" aria-label="Animation frame"><div class="bar"><button id="prev">Previous</button><button id="play">Play</button><button id="next">Next</button><label>Speed <select id="speed"><option value="1600">Slow</option><option selected value="950">Normal</option><option value="200">Fast</option><option value="55">Talk speed</option></select></label><label>Frames per click <select id="stride"><option>1</option><option>10</option><option>50</option></select></label><span id="frame"></span></div></div>
+<p><small>The snowball example was chosen to show repeated contractions on 256 vertices. New sample draws a fresh seed. Braces identify the original vertices that currently act as one. The drawing keeps their positions fixed so you can follow which original arrow supplies each exit.</small></p><script>
+function rng(seed){return ()=>{seed=(seed+0x6D2B79F5)>>>0;let z=Math.imul(seed^(seed>>>15),1|seed);z^=z+Math.imul(z^(z>>>7),61|z);return (((z^(z>>>14))>>>0)+.5)/4294967296}}
+function walk(n,seed){
+ const random=rng(seed),weights=Array.from({length:n},(_,a)=>Array.from({length:n},(_,b)=>a===b?Infinity:-Math.log1p(-random())));
+ const label=v=>v===0?'∂':v===1?'ρ':String(v), group=g=>g.length===1?label(g[0]):'{'+(g.length>6?g.slice(0,3).map(label).join(', ')+', … | '+g.length+' vertices':g.map(label).join(', '))+'}';
+ const cost=Array(n).fill(0),stack=[[1]],links=[],history=[],seen=new Set([1]),frames=[];
+ let chosen=[],step=0;
+ function snap(title,caption,active,focus=[],route=[]){
+ frames.push({step,title,caption,active:[...active],focus:[...focus],route:[...route],edges:[...chosen],stack:stack.slice(),seen:[...seen]});
+ }
+ snap('Start at ρ','Only ρ is active. Reveal its cheapest outgoing arrow.',[1]);
+ while(!stack.at(-1).includes(0)){
+  step++;const current=stack.at(-1),inside=new Set(current);let best=null,value=Infinity;
+  for(const a of current)for(let b=0;b<n;b++)if(!inside.has(b)&&weights[a][b]-cost[a]<value){value=weights[a][b]-cost[a];best={a,b}}
+  for(const a of current)cost[a]+=value;
+  chosen.push(best);links.push(best);seen.add(best.b);
+  const pos=stack.findIndex(g=>g.includes(best.b));
+  const description='Choose '+label(best.a)+' → '+label(best.b)+' from '+group(current)+' (reduced weight '+value.toFixed(3)+'). ';
+  if(pos<0){stack.push([best.b]);snap(best.b===0?'Reach ∂':'Extend the path',description+(best.b===0?'The forward exploration stops here.':'Continue from '+label(best.b)+'.'),[best.b],[best]);continue}
+  const parts=stack.slice(pos),cycleEdges=links.slice(pos),merged=parts.flat();
+  snap('Close a cycle',description+'The target is already on the current path.',current,cycleEdges);
+  history.push({parts,cycleEdges,merged});stack.splice(pos,parts.length,merged);links.splice(pos);
+  snap('Contract the cycle',group(merged)+' now acts as one vertex. Its next exit can start at any of its '+merged.length+' original vertices.',merged);
+ }
+ for(const {parts,cycleEdges,merged} of history.reverse()){
+  const members=new Set(merged),exit=chosen.find(e=>members.has(e.a)&&!members.has(e.b));
+  const i=parts.findIndex(g=>g.includes(exit.a)),drop=cycleEdges[i];chosen=chosen.filter(e=>e!==drop);
+  snap('Uncontract a cycle','The exit is '+label(exit.a)+' → '+label(exit.b)+'. Drop '+label(drop.a)+' → '+label(drop.b)+' so the arrows from this cycle lead to that exit.',merged,[exit]);
+ }
+ const route=[1];while(route.at(-1)!==0){const e=chosen.find(e=>e.a===route.at(-1));if(!e||route.length>n)throw Error('Invalid path');route.push(e.b)}
+ snap('Final path to ∂',route.map(label).join(' → ')+'   ·   '+(route.length-1)+' edges after uncontraction.',[],[],route);
+ return frames;
+}
+const el=id=>document.getElementById(id),lab=v=>v===0?'∂':v===1?'ρ':String(v);
+let frames=[],index=0,timer=null;
+function stop(){clearInterval(timer);timer=null;el('play').textContent='Play'}
+function render(){
+ const f=frames[index],n=Number(el('size').value),done=f.route.length>0,expand=f.title==='Uncontract a cycle',pos=[];
+ for(let v=0;v<n;v++){const t=2*Math.PI*v/n-Math.PI/2;const a=n>30?v*2.399963:t,r=n>30?Math.sqrt((v+.6)/n):1;pos.push([240+202*r*Math.cos(a),201+168*r*Math.sin(a)])}
+ let svg='<defs>';for(const [key,color] of Object.entries({edge:'#38685b',focus:'#ae5229',past:'#acb9b2'}))svg+='<marker id="'+key+'" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0 0L7 3.5L0 7Z" fill="'+color+'"/></marker>';svg+='</defs>';
+ const radius=n>30?(n>128?3.4:5):12;const byVertex=new Map();f.stack.forEach((g,i)=>g.forEach(v=>byVertex.set(v,i)));const keys=new Set(f.edges.map(e=>e.a*n+e.b));const drawing=f.edges.map(e=>{const k=f.route.indexOf(e.a),hot=f.focus.includes(e)||(k>=0&&f.route[k+1]===e.b),internal=byVertex.get(e.a)===byVertex.get(e.b);return {e,key:hot?'focus':done||(!expand&&internal)?'past':'edge'}}).sort((a,b)=>Number(a.key==='focus')-Number(b.key==='focus'));
+ for(const {e,key} of drawing){const [x,y]=pos[e.a],[X,Y]=pos[e.b],d=Math.hypot(X-x,Y-y),u=(X-x)/d,v=(Y-y)/d,rev=keys.has(e.b*n+e.a),offset=rev?5:0;
+ svg+='<line x1="'+(x+radius*u-offset*v)+'" y1="'+(y+radius*v+offset*u)+'" x2="'+(X-(radius+2)*u-offset*v)+'" y2="'+(Y-(radius+2)*v+offset*u)+'" stroke="'+({focus:'#ae5229',past:'#acb9b2',edge:'#38685b'}[key])+'" stroke-width="'+(key==='focus'?3:1.7)+'" marker-end="url(#'+key+')"/>'}
+ pos.forEach(([x,y],v)=>{const active=f.active.includes(v)||f.route.includes(v),seen=f.seen.includes(v);svg+='<circle cx="'+x+'" cy="'+y+'" r="'+radius+'" fill="'+(active?'#ffdebb':seen?'#e0eee5':'#f7f7f0')+'" stroke="'+(active?'#a54e24':seen?'#427162':'#ccd3c9')+'"/><text x="'+x+'" y="'+(y+4.4)+'" text-anchor="middle" font-size="13" fill="#2b4840">'+(n<=30?lab(v):'')+'</text>';if(n>30&&v<2)svg+='<text x="'+(x-9)+'" y="'+(y-5)+'" font-size="15" stroke="white" stroke-width="3" paint-order="stroke">'+lab(v)+'</text>'});el('graph').innerHTML=svg;
+ el('title').textContent=f.title;el('desc').textContent=f.caption;el('stage').textContent=done?'Result':expand?'Uncontraction':'Forward exploration';
+ const groups=done?f.route.map(v=>[v]):expand?[f.active]:f.stack;
+ el('chainTitle').textContent=done?'Original vertices on the path':expand?'Component being uncontracted':'Current contracted path';
+ el('chain').innerHTML=(groups.length>8?'<small>'+groups.length+' blocks · last 8 shown</small> ':'')+groups.slice(-8).map(g=>'<span class="chip '+(g.some(v=>f.active.includes(v))?'active':'')+'">'+(g.length===1?lab(g[0]):'{'+(g.length>6?g.length+' vertices':g.map(lab).join(', '))+'}')+'</span>').join(' → ');
+ el('counts').textContent='Distinct vertices reached: '+f.seen.length+(done?' · Final path length: '+(f.route.length-1):'');
+ el('frame').textContent='Edge choices '+f.step+' · Frame '+(index+1)+' / '+frames.length;el('scrub').value=index;el('prev').disabled=index===0;el('next').disabled=index===frames.length-1}
+function load(){if(!el('seed').value||!el('seed').reportValidity())return;stop();frames=walk(Number(el('size').value),Number(el('seed').value));index=0;el('scrub').max=frames.length-1;render()}
+function play(){if(timer)return stop();if(index===frames.length-1)index=0;render();el('play').textContent='Pause';timer=setInterval(()=>{index++;render();if(index===frames.length-1)stop()},Number(el('speed').value))}
+el('play').onclick=play;el('prev').onclick=()=>{stop();index=Math.max(0,index-Number(el('stride').value));render()};el('next').onclick=()=>{stop();index=Math.min(frames.length-1,index+Number(el('stride').value));render()};el('scrub').oninput=()=>{stop();index=Number(el('scrub').value);render()};el('speed').onchange=()=>{if(timer){stop();play()}};el('demo').onclick=()=>{el('size').value=256;el('seed').value=3;load()};el('fresh').onclick=()=>{el('seed').value=crypto.getRandomValues(new Uint32Array(1))[0];load()};el('size').onchange=el('seed').onchange=load;load();
+</script></html>
