@@ -1,0 +1,92 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CLEB · Growth of a supervertex</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#faf8f0;color:#172f36;font:17px system-ui,sans-serif}main{max-width:1050px;margin:4vh auto;padding:22px}h1{font:clamp(32px,5vw,62px) Georgia,serif;letter-spacing:-.04em;margin:0 0 10px}p{line-height:1.5}section{background:white;border:1px solid #d6dfd9;border-radius:16px;padding:18px}button,select,input{font:inherit}button,select,input[type=number]{padding:8px 12px;border:1px solid #adbeba;border-radius:7px;background:white;color:inherit}button{cursor:pointer}button.primary{background:#076d65;color:white}nav{display:flex;align-items:center;gap:10px;flex-wrap:wrap}#scrub{width:100%;accent-color:#076d65}canvas{width:100%;height:300px;display:block}output{display:block;font-weight:600;margin:8px 0;min-height:1.5em}footer,details{margin:16px 0;color:#425856}label{white-space:nowrap}input[type=number]{width:9em}
+#visual{display:grid;grid-template-columns:minmax(200px,0.8fr) minmax(0,1.4fr);align-items:center}#ballview{text-align:center;color:#35554c}#ballview svg{width:100%;height:210px}#count{font: bold 32px Georgia,serif;display:block}#visual canvas{height:245px}#limit{width:8em}footer{font-size:15px}@media(max-width:690px){#visual{grid-template-columns:1fr}#ballview svg{height:135px}#visual canvas{height:170px}}</style><main><h1>Growth of a CLEB supervertex</h1><p>Start at ρ. When the walk closes its first cycle, follow the resulting supervertex until the walk reaches ∂. The teal disk grows as later cycles absorb more vertices. The dotted circle represents the entire graph.</p>
+<section><div id="visual"><div id="ballview"><svg viewBox="0 0 220 220" role="img" aria-label="Disk area represents the fraction of all vertices in this supervertex"><circle cx="110" cy="110" r="100" fill="#eff4ef" stroke="#9ab6a7" stroke-dasharray="3 4"/><circle id="ball" cx="110" cy="110" r="0" fill="#0e8177"/></svg><b id="count"></b><small>vertices in the supervertex</small></div><canvas id="plot" aria-label="Number of original vertices in the tracked supervertex versus exploration step"></canvas></div><output id="status"></output><input id="scrub" type="range" min="0" step="1" aria-label="Exploration step"><nav><button class="primary" id="play">Play</button><button id="first">First contraction</button><button id="jump">Next growth</button><button id="more">+100,000 steps</button></nav><nav style="margin-top:12px"><label>Play up to step <input id="limit" type="number" min="1" max="10000000" step="1" value="100000" required></label><button id="apply">Apply</button></nav></section>
+<footer><nav><label>Vertices <select id="size"><option value="10000">10,000</option><option value="100000">100,000</option><option value="1000000" selected>1,000,000</option><option value="5000000">5,000,000</option></select></label><label>Seed <input type="number" id="seed" min="0" max="4294967295" step="1" value="1"></label><button id="run">Run seed</button><button id="fresh">New sample</button></nav></footer>
+<details><summary>How the simulation works</summary><p>Each directed edge has an independent rate-one exponential weight. By exponential memorylessness, after each minimum is subtracted, the remaining eligible outgoing edges have independent exponential residuals. The minimizing edge is uniform among the original edges leaving the active block. In a complete directed graph every outside vertex receives the same number of these edges, so we can sample the target directly without storing all the weights.</p><p>One step selects one outgoing edge. Hitting an earlier block on the current path contracts the whole cycle. The curve follows the first contracted block and every block that later absorbs it. The run stops on its first visit to ∂. An early boundary hit can leave little or no growth.</p></details></main><script>
+function simulate(n, seed) {
+  let state = seed >>> 0;
+  function random() {
+    state = (state + 0x6d2b79f5) >>> 0;
+    let z = Math.imul(state ^ state >>> 15, 1 | state);
+    z ^= z + Math.imul(z ^ z >>> 7, 61 | z);
+    return ((z ^ z >>> 14) >>> 0) / 4294967296;
+  }
+  // Each block occupies an interval of discovery ranks on the active path.
+  const starts = [0], growth = [];
+  let seen = 1, steps = 0, tracked = -1, contractions = 0;
+  let done=false;
+  function advance(limit) {
+  while (!done && steps < limit) {
+    steps++;
+    const top = starts[starts.length - 1];
+    const outside = n - (seen - top);
+    // Last external rank is the boundary. Earlier ranks below top are on the path.
+    const target = Math.floor(random() * outside);
+    if (target === outside - 1) {done=true; break;}
+    if (target >= top) {
+      starts.push(seen++);
+      continue;
+    }
+    let lo = 0, hi = starts.length - 1;
+    while (hi - lo > 1) {
+      const mid = (lo + hi) >>> 1;
+      if (starts[mid] <= target) lo = mid;
+      else hi = mid;
+    }
+    starts.length = lo + 1;
+    contractions++;
+    if (tracked === -1 || lo <= tracked) {
+      tracked = lo;
+      growth.push([steps, seen - starts[lo]]);
+    }
+  }
+  }
+  return {n, seed, get steps(){return steps}, get done(){return done}, growth, advance};
+}
+const el=id=>document.getElementById(id), fmt=x=>x.toLocaleString('en-US');
+let horizon=1,sample,t=0,anim=0,base,startTime;
+function mass(i){
+  const g=sample.growth;
+  let a=0,b=g.length;
+  while(a<b){const m=(a+b)>>>1;if(g[m][0]<=i)a=m+1;else b=m;}
+  return a ? g[a-1][1] : 0;
+}
+function draw(){
+ const c=el('plot'),w=c.clientWidth,h=c.clientHeight,d=devicePixelRatio||1;
+ c.width=w*d;c.height=h*d;const ctx=c.getContext('2d');ctx.scale(d,d);
+ const left=65,top=35,right=w-16,bottom=h-43,g=sample.growth,max=Math.max(1,mass(horizon));
+ const x=i=>left+(right-left)*i/horizon,y=m=>bottom-(bottom-top)*m/max;
+ ctx.font='13px system-ui';ctx.fillStyle='#284843';ctx.fillText('Original vertices in the tracked supervertex',6,17);
+ for(let j=0;j<=4;j++){const m=Math.round(max*j/4);ctx.fillStyle='#425856';ctx.textAlign='right';ctx.fillText(fmt(m),left-6,y(m)+4);ctx.strokeStyle='#dce5df';ctx.beginPath();ctx.moveTo(left,y(m));ctx.lineTo(right,y(m));ctx.stroke();}
+ ctx.textAlign='left';ctx.fillText('0',left,bottom+19);ctx.textAlign='right';ctx.fillText(fmt(horizon),right,bottom+19);ctx.textAlign='center';ctx.fillText('Exploration step',(left+right)/2,h-4);
+ const last=mass(t);
+ el('ball').setAttribute('r',100*Math.sqrt(last/sample.n));el('count').textContent=fmt(last);
+ if(g.length && t>=g[0][0]){
+ ctx.beginPath();ctx.moveTo(x(g[0][0]),y(g[0][1]));
+ // At most one vertical jump per display pixel; exact sizes in the readout.
+ let previous=g[0][1];
+ for(let px=Math.ceil(x(g[0][0]));px<=Math.ceil(x(t));px++){const i=Math.min(t,Math.round((px-left)*horizon/(right-left)));const m=mass(i);if(i<g[0][0])continue;ctx.lineTo(x(i),y(previous));ctx.lineTo(x(i),y(m));previous=m;}
+ ctx.strokeStyle='#08756b';ctx.lineWidth=2.5;ctx.stroke();ctx.fillStyle='#c4502a';ctx.beginPath();ctx.arc(x(t),y(last),5,0,2*Math.PI);ctx.fill();}
+ el('scrub').value=t;el('status').textContent='Step '+fmt(t)+' of '+fmt(horizon)+' · '+(last?fmt(last)+' original vertices ('+(100*last/sample.n).toFixed(2)+'%)':'Awaiting first cycle')+(t===horizon?(sample.done && t===sample.steps?' · Reached ∂':' · Step limit reached'):'');
+}
+function pause(){cancelAnimationFrame(anim);anim=0;el('play').textContent='Play';}
+function seek(v){pause();t=v;draw();}
+function run(){pause();if(!el('seed').reportValidity())return;sample=simulate(+el('size').value,+el('seed').value);setLimit();seek(0);}
+el('play').onclick=()=>{if(anim){pause();return;}if(t===horizon)t=0;base=t;startTime=performance.now();el('play').textContent='Pause';function frame(now){t=Math.min(horizon,base+Math.floor(horizon*(now-startTime)/18000));draw();if(t===horizon)pause();else anim=requestAnimationFrame(frame);}anim=requestAnimationFrame(frame);};
+function setLimit(){
+ if(!el('limit').reportValidity())return;
+ const requested=Number(el('limit').value);
+ const playing=Boolean(anim);
+ sample.advance(requested);horizon=Math.min(requested,sample.steps);el('scrub').max=horizon;
+ el('first').disabled=!sample.growth.length || sample.growth[0][0]>horizon;
+ el('more').disabled=(sample.done && horizon===sample.steps) || requested>=10000000;
+ seek(Math.min(t,horizon));if(playing && t<horizon)el('play').onclick();
+}
+el('apply').onclick=setLimit;
+el('more').onclick=()=>{el('limit').value=Math.min(horizon+100000,10000000);setLimit();};
+el('first').onclick=()=>seek(sample.growth[0][0]);
+el('jump').onclick=()=>{let g=sample.growth,lo=0,hi=g.length;while(lo<hi){let m=(lo+hi)>>>1;if(g[m][0]<=t)lo=m+1;else hi=m;}seek(Math.min(g[lo]?.[0]??horizon,horizon));};
+el('scrub').oninput=e=>seek(+e.target.value);el('run').onclick=run;el('fresh').onclick=()=>{el('seed').value=crypto.getRandomValues(new Uint32Array(1))[0];run();};window.addEventListener('resize',draw);run();
+</script></html>
